@@ -16,21 +16,15 @@ import (
 )
 
 type Schema struct {
-	Target         string `json:"target"`
-	Port           int    `json:"port"`
-	Username       string `json:"username"`
-	Password       string `json:"password"`
-	Domain         string `json:"domain"`
-	Share          string `json:"share"`
-	File           string `json:"file"`
-	Exists         bool   `json:"exists"`
-	ExactMatch     bool   `json:"match"`
-	SubstringMatch bool   `json:"substring_match"`
-	RegexMatch     bool   `json:"regex_match"`
-	SHA256         bool   `json:"sha256"`
-	MD5            bool   `json:"md5"`
-	SHA1           bool   `json:"sha1"`
-	ExpectedOutput string `json:"expected_output"`
+	Server         string `key:"server"`
+	Port           int    `key:"port" default:"445"`
+	Username       string `key:"username"`
+	Password       string `key:"password"`
+	Domain         string `key:"domain"`
+	Share          string `key:"share" default:"C$"`
+	File           string `key:"file"`
+	MatchType      string `key:"match_type" default:"exists" enum:"exists,exactMatch,substringMatch,regexMatch,sha256,md5,sha1"`
+	ExpectedOutput string `key:"expected_output"`
 }
 
 func ValidateConfig(config *Schema) error {
