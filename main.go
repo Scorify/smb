@@ -10,9 +10,11 @@ import (
 	"io"
 	"net"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/hirochachacha/go-smb2"
+	"github.com/scorify/schema"
 )
 
 type Schema struct {
@@ -27,54 +29,44 @@ type Schema struct {
 	ExpectedOutput string `key:"expected_output"`
 }
 
-func ValidateConfig(config *Schema) error {
-	if config.Target == "" {
-		return fmt.Errorf("target must be provided")
+func Validate(config string) error {
+	conf := Schema{}
+
+	err := schema.Unmarshal([]byte(config), &conf)
+	if err != nil {
+		return err
 	}
 
-	if config.Port == 0 {
-		return fmt.Errorf("port must be provided")
+	if conf.Server == "" {
+		return fmt.Errorf("server is required; got %q", conf.Server)
 	}
 
-	comparisonType := []string{}
-	if config.Exists {
-		comparisonType = append(comparisonType, "exists")
+	if conf.Port <= 0 || conf.Port > 65535 {
+		return fmt.Errorf("port must be valid; got %d", conf.Port)
 	}
 
-	if config.SubstringMatch {
-		comparisonType = append(comparisonType, "substringMatch")
+	if conf.Username == "" {
+		return fmt.Errorf("username is required; got %q", conf.Username)
 	}
 
-	if config.RegexMatch {
-		comparisonType = append(comparisonType, "regexMatch")
+	if conf.Domain == "" {
+		return fmt.Errorf("domain is required; got %q", conf.Domain)
 	}
 
-	if config.ExactMatch {
-		comparisonType = append(comparisonType, "exactMatch")
+	if conf.Share == "" {
+		return fmt.Errorf("share is required; got %q", conf.Share)
 	}
 
-	if config.SHA256 {
-		comparisonType = append(comparisonType, "sha256")
+	if conf.File == "" {
+		return fmt.Errorf("file is required; got %q", conf.File)
 	}
 
-	if config.MD5 {
-		comparisonType = append(comparisonType, "md5")
+	if slices.Contains([]string{"exists", "exactMatch", "substringMatch", "regexMatch", "sha256", "md5", "sha1"}, conf.MatchType) {
+		return fmt.Errorf("match_type must be one of exists, exactMatch, substringMatch, regexMatch, sha256, md5, sha1; got %q", conf.MatchType)
 	}
 
-	if config.SHA1 {
-		comparisonType = append(comparisonType, "sha1")
-	}
-
-	if len(comparisonType) == 0 {
-		return fmt.Errorf("exactly one comparison type must be provided; provided none")
-	}
-
-	if len(comparisonType) > 1 {
-		return fmt.Errorf("exactly one comparison type must be provided; provided multiple: %v", comparisonType)
-	}
-
-	if config.ExpectedOutput == "" && !config.Exists {
-		return fmt.Errorf("expectedOutput must be provided for all comparison types except exists")
+	if conf.ExpectedOutput == "" && conf.MatchType != "exists" {
+		return fmt.Errorf("expected_output is required for non-exist checks; got %q for %q", conf.ExpectedOutput, conf.MatchType)
 	}
 
 	return nil
