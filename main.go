@@ -60,7 +60,7 @@ func Validate(config string) error {
 		return fmt.Errorf("file is required; got %q", conf.File)
 	}
 
-	if slices.Contains([]string{"exists", "exactMatch", "substringMatch", "regexMatch", "sha256", "md5", "sha1"}, conf.MatchType) {
+	if !slices.Contains([]string{"exists", "exactMatch", "substringMatch", "regexMatch", "sha256", "md5", "sha1"}, conf.MatchType) {
 		return fmt.Errorf("match_type must be one of exists, exactMatch, substringMatch, regexMatch, sha256, md5, sha1; got %q", conf.MatchType)
 	}
 
