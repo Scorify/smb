@@ -71,10 +71,6 @@ func Validate(config string) error {
 	return nil
 }
 
-func clean(input error) error {
-	return fmt.Errorf("%s", strings.ReplaceAll(input.Error(), "\x00", ""))
-}
-
 func Run(ctx context.Context, config string) error {
 	conf := Schema{}
 
@@ -84,9 +80,10 @@ func Run(ctx context.Context, config string) error {
 	}
 
 	connStr := fmt.Sprintf("%s:%d", conf.Server, conf.Port)
-	conn, err := net.Dial("tcp", connStr)
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(ctx, "tcp", connStr)
 	if err != nil {
-		return fmt.Errorf("failed to connect to %s: %w", connStr, clean(err))
+		return fmt.Errorf("failed to connect to %q; %w", connStr, err)
 	}
 	defer conn.Close()
 
@@ -100,31 +97,31 @@ func Run(ctx context.Context, config string) error {
 
 	smbConn, err := smbDialer.DialContext(ctx, conn)
 	if err != nil {
-		return fmt.Errorf("failed to dial %s: %w", connStr, clean(err))
+		return fmt.Errorf("failed to dial %s: %w", connStr, err)
 	}
 	defer smbConn.Logoff()
 
 	sharePath := fmt.Sprintf(`\\%s\%s`, conf.Server, conf.Share)
 	fs, err := smbConn.Mount(sharePath)
 	if err != nil {
-		return fmt.Errorf("failed to mount %s: %w", sharePath, clean(err))
+		return fmt.Errorf("failed to mount %s: %w", sharePath, err)
 	}
 	defer fs.Umount()
 
 	file, err := fs.Open(conf.File)
 	if err != nil {
-		return fmt.Errorf("failed to open %s: %w", conf.File, clean(err))
+		return fmt.Errorf("failed to open %s: %w", conf.File, err)
 	}
 	defer file.Close()
 
 	_, err = file.Seek(0, io.SeekStart)
 	if err != nil {
-		return fmt.Errorf("failed to seek to start of %s: %w", conf.File, clean(err))
+		return fmt.Errorf("failed to seek to start of %s: %w", conf.File, err)
 	}
 
 	bodyBytes, err := io.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("failed to read %s: %w", conf.File, clean(err))
+		return fmt.Errorf("failed to read %s: %w", conf.File, err)
 	}
 
 	switch conf.MatchType {
